@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: `snapshot.py` now copies every tracked file. It used `git archive`, which silently drops files a project marks export-ignore (often its tests). It also refuses links that point outside the project.
+
 ## 0.1.0
 
 First public release.
