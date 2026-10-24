@@ -6,17 +6,17 @@ Usage: snapshot.py OWNER/FORK [--name NEW_NAME] [--keep-workflows] [--ignore-lic
 
 Safer than a GitHub fork: it is private, it is not linked to a repo the author can keep
 changing, it carries one commit and no history, and CI workflow files are stripped so
-GitHub Actions has nothing to run. Files come from `git archive` of the scanned clone,
-never the clone's .git folder. Refuses unless the scan and the reviewer's record match
+GitHub Actions has nothing to run. Files are every tracked file of the scanned clone
+(`git checkout-index`, so nothing marked export-ignore is lost), never its .git folder. Refuses unless the scan and the reviewer's record match
 the fork's current head, and the clone still sits on that commit. Without --confirm it
 only prints the plan. The user's explicit yes is required before --confirm.
 """
 import argparse
 import importlib.util
+import os
 import shutil
 import subprocess
 import sys
-import tarfile
 from datetime import date
 from pathlib import Path
 
@@ -67,12 +67,16 @@ def main():
         return
 
     work.mkdir(parents=True)
-    p = subprocess.Popen(["git", "-C", str(clone), "archive", "--format=tar", "HEAD"], stdout=subprocess.PIPE)
-    with tarfile.open(fileobj=p.stdout, mode="r|") as tf:
-        tf.extractall(work, filter="data")  # refuses links and paths that escape the folder
-    if p.wait():
+    # checkout-index copies every tracked file; `git archive` would silently drop files the
+    # project marks export-ignore (often its tests). The clone's .git folder is never copied.
+    r = subprocess.run(["git", "-C", str(clone), "checkout-index", "-a", f"--prefix={work}/"], capture_output=True, text=True)
+    if r.returncode:
         shutil.rmtree(work)
-        sys.exit("git archive failed")
+        sys.exit(f"copy failed: {r.stderr.strip()[:200]}")
+    for p in work.rglob("*"):
+        if p.is_symlink() and not (p.parent / os.readlink(p)).resolve().is_relative_to(work.resolve()):
+            shutil.rmtree(work)
+            sys.exit(f"refusing: {p.relative_to(work)} is a link that points outside the project")
     if not a.keep_workflows:
         shutil.rmtree(work / ".github" / "workflows", ignore_errors=True)
     (work / "PROVENANCE.md").write_text(
