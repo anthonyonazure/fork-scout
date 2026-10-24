@@ -1,0 +1,20 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # pinned to a commit, not a tag the author can move (v4.2.2)
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Compile every script
+        run: python3 -m compileall -q skills tests
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v

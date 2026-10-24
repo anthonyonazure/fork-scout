@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <g transform="translate(110 120) scale(0.8)">
+    <g fill="none" stroke="#2dd4bf" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M256 420 L256 300"/>
+      <path d="M256 300 C256 240 176 240 176 170"/>
+      <path d="M256 300 C256 240 336 240 336 170"/>
+      <circle cx="256" cy="420" r="26" fill="#0f172a"/>
+      <circle cx="176" cy="140" r="30" fill="#0f172a"/>
+      <circle cx="336" cy="140" r="30" fill="#0f172a"/>
+    </g>
+    <g fill="none" stroke="#fbbf24" stroke-width="14" stroke-linecap="round">
+      <circle cx="336" cy="140" r="68"/>
+      <path d="M386 190 L436 240" stroke-width="20"/>
+    </g>
+  </g>
+  <text x="600" y="290" font-family="Helvetica, Arial, sans-serif" font-size="112" font-weight="700" fill="#f8fafc">fork-scout</text>
+  <text x="604" y="370" font-family="Helvetica, Arial, sans-serif" font-size="44" fill="#2dd4bf">Find the forks worth copying.</text>
+  <text x="604" y="440" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#94a3b8">A Claude Code skill. Browse, vet and</text>
+  <text x="604" y="482" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#94a3b8">copy GitHub forks.</text>
+</svg>
