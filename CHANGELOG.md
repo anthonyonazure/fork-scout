@@ -6,6 +6,7 @@
 - Fixed: shell startup file edits are now flagged (the rule could not match before a dot).
 - Fixed: a fork whose changed file list hit GitHub's 300 file cap is now flagged instead of silently half scanned.
 - Fixed: `exec`/`eval` of decoded text is now serious; more credential stores, Stripe style keys, hidden characters and CI text injection are flagged; dependencies fetched from a raw address are listed as unchecked; auto-loaded test setup files are no longer capped at minor.
+- Changed: scan rules moved into `skills/fork-scout/rules.json`, read by the scripts and ready for a browser extension to share. Python and JavaScript matched on all 33 test cases.
 - Changed: medium scan findings now need `--accept-concerns` even when the reviewer says clear.
 
 - Fixed: `snapshot.py` now copies every tracked file. It used `git archive`, which silently drops files a project marks export-ignore (often its tests). It also refuses links that point outside the project.

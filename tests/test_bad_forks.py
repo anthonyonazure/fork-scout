@@ -73,6 +73,26 @@ class Caught(unittest.TestCase):
                 self.assertGreaterEqual(worst(name, lines), RANK[want], f"{label}: scan was too quiet")
 
 
+class SharedRules(unittest.TestCase):
+    """rules.json is read by the scripts now and by the browser extension later, so it must stay well formed."""
+
+    def test_every_rule_has_a_valid_severity_and_a_pattern_that_compiles(self):
+        import re
+        self.assertTrue(C.RULES)
+        for sev, label, pattern, why in C.RULES:
+            with self.subTest(label):
+                self.assertIn(sev, RANK)
+                self.assertTrue(why)
+                re.compile(pattern, re.I)
+
+    def test_no_pattern_uses_python_only_syntax_the_extension_could_not_read(self):
+        for _, label, pattern, _ in C.RULES:
+            with self.subTest(label):
+                self.assertNotIn("(?P<", pattern)
+                self.assertNotIn("(?i)", pattern)
+                self.assertNotIn("(?<=", pattern)
+
+
 class Benign(unittest.TestCase):
     def test_ordinary_work_raises_no_flag_above_low(self):
         for label, name, lines in BENIGN:

@@ -71,38 +71,16 @@ def upstream_of(fork, given=None):
 
 
 # ---------------------------------------------------------------- scan rules
-# (severity, label, regex, why it matters)
-RULES = [
-    ("HIGH", "pipe to shell", r"(curl|wget)[^\n|]*\|\s*(sudo\s+)?(ba|z)?sh\b", "downloads and runs code in one step"),
-    ("HIGH", "reverse shell", r"/dev/tcp/|\bnc\s+(-e|-c)\b|bash\s+-i\s+>&", "opens a remote control channel"),
-    ("HIGH", "decode then run", r"(b64decode|base64\s+(-d|--decode)|atob)\(?[^\n]{0,80}(exec|eval|sh\b)|(exec|eval)\s*\([^\n]{0,60}(b64decode|atob|base64)", "hides code then runs it"),
-    ("HIGH", "reads credential stores", r"(\.ssh/(id_|config)|\.aws/credentials|\.netrc|Login Data|Library/Keychains|\bop\s+(read|item\s+get)|(~|\$HOME|\$\{HOME\}|expanduser|Path\.home)[^\n]{0,40}\.(npmrc|docker/config\.json|kube/config|config/gh/hosts\.yml|gnupg)|security\s+find-(generic|internet)-password)", "touches passwords or keys"),
-    ("HIGH", "hides from user", r"(do not|don't|never)\s+(tell|inform|mention|show)[^\n]{0,30}(the )?user|without\s+(telling|informing)\s+the\s+user", "instruction aimed at an AI to keep a secret"),
-    ("HIGH", "prompt override", r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|rules)|disregard\s+(your|the)\s+(instructions|rules)", "tries to override an AI's rules"),
-    ("HIGH", "private key", r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "a private key is committed"),
-    ("HIGH", "workflow runs outsider code", r"pull_request_target", "CI job that can run a stranger's code with your secrets"),
-    ("MEDIUM", "possible secret", r"(ghp_|gho_|github_pat_)[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|[sr]k_live_[A-Za-z0-9]{16,}|xox[bp]-[A-Za-z0-9-]{10,}", "looks like a live key or token"),
-    ("MEDIUM", "workflow pastes outsider text", r"\$\{\{\s*github\.(event\.(pull_request\.(title|body|head\.ref)|issue\.(title|body)|comment\.body|review\.body|head_commit\.message)|head_ref)\s*\}\}", "CI step that puts a stranger's text into a command"),
-    ("MEDIUM", "hidden characters", "[​⁠‪-‮⁦-⁩]", "invisible characters can make text read differently than it runs"),
-    ("MEDIUM", "workflow uses moving version", r"uses:\s*\S+@(main|master|latest|v\d+)\s*$", "CI step pinned to a tag the author can change"),
-    ("MEDIUM", "runs shell or programs", r"\b(os\.system|subprocess\.|child_process|execSync|spawnSync|Runtime\.getRuntime|popen\()", "launches other programs"),
-    ("MEDIUM", "dynamic code", r"\b(eval|exec)\s*\(|new Function\(", "runs text as code"),
-    ("MEDIUM", "persistence", r"\b(launchctl|crontab|systemctl|LaunchAgents|schtasks)\b|\.(bashrc|zshrc|zprofile|bash_profile)\b", "keeps running or edits startup files"),
-    ("MEDIUM", "touches AI config", r"(\.claude/(settings|hooks|skills)|CLAUDE\.md|AGENTS\.md|\"hooks\"\s*:|SessionStart|PreToolUse|UserPromptSubmit)", "changes how your AI assistant behaves"),
-    ("MEDIUM", "sends data out", r"(requests\.(post|put)|fetch\([^)]*method\s*:\s*['\"]POST|axios\.post|curl\s[^\n]*(-d|--data|-F)\b|webhook|discord\.com/api/webhooks|pastebin)", "uploads something somewhere"),
-    ("MEDIUM", "install-time script", r"\"(preinstall|postinstall|prepare|install)\"\s*:", "runs when the package is installed"),
-    ("MEDIUM", "obfuscation", r"(String\.fromCharCode|\\x[0-9a-fA-F]{2}(\\x[0-9a-fA-F]{2}){12,}|[A-Za-z0-9+/=]{300,})", "looks deliberately hard to read"),
-    ("LOW", "environment secrets", r"(os\.environ|process\.env)[^\n]{0,40}(KEY|TOKEN|SECRET|PASSWORD)", "reads API keys from the environment"),
-]
-BINARY_EXT = {".exe", ".dll", ".so", ".dylib", ".node", ".jar", ".whl", ".pyc", ".bin", ".msi", ".pkg", ".dmg", ".app", ".apk"}
-SAFE_HOSTS = {"github.com", "githubusercontent.com", "docs.python.org", "python.org", "pypi.org", "npmjs.com", "anthropic.com", "openai.com", "wikipedia.org", "example.com", "localhost", "w3.org", "shields.io"}
-KNOWN_INSTALLERS = ("deb.nodesource.com", "astral.sh/uv", "sh.rustup.rs", "get.docker.com", "bun.sh/install", "deno.land/install", "raw.githubusercontent.com/Homebrew/install")
+# The rules live in rules.json beside the scripts so the browser extension can read the same file.
+_R = json.loads((Path(__file__).resolve().parent.parent / "rules.json").read_text())
+RULES = [(r["severity"], r["label"], r["pattern"], r["why"]) for r in _R["rules"]]  # (severity, label, regex, why it matters)
+BINARY_EXT = set(_R["binary_extensions"])
+SAFE_HOSTS = set(_R["safe_hosts"])
+KNOWN_INSTALLERS = tuple(_R["known_installers"])
+GITHUB_FILE_CAP = _R["github_file_cap"]  # GitHub's compare call lists at most this many files; past it the list is cut short
+AUTO_RUN_TEST_FILES = set(_R["auto_run_test_files"])  # test tools load these by themselves
 URL_RE = re.compile(r"https?://([A-Za-z0-9.-]+)")
-TEST_RE = re.compile(r"(^|/)(tests?|__tests__|spec)/|(^|/)test_[^/]*$|\.test\.[jt]sx?$")
-
-
-GITHUB_FILE_CAP = 300  # GitHub's compare call lists at most this many files; past it the list is cut short
-AUTO_RUN_TEST_FILES = {"conftest.py", "setupTests.js", "jest.setup.js", "vitest.setup.ts"}  # test tools load these by themselves
+TEST_RE = re.compile(_R["test_path_pattern"])
 
 
 def is_test_path(name):
