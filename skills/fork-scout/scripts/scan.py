@@ -29,6 +29,7 @@ C = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(C)
 
 DEP_FILES = ("requirements", "package.json", "pyproject.toml")
+NOT_DEPENDENCIES = {"homepage", "url", "repository", "bugs", "funding", "main", "license", "author"}  # package.json keys that hold addresses but are not packages
 
 
 def new_dependencies(name, lines):
@@ -42,6 +43,10 @@ def new_dependencies(name, lines):
             if m and not s.startswith(("#", "-")):
                 out.append(("PyPI", m.group(1), m.group(3)))
         elif base == "package.json":
+            a = re.match(r'"(@?[\w./-]+)"\s*:\s*"(github:|git\+|git://|https?://)', s)
+            if a and a.group(1) not in NOT_DEPENDENCIES:
+                out.append(("address", a.group(1), None))
+                continue
             m = re.match(r'"(@?[\w./-]+)"\s*:\s*"([~^]?)(\d[\w.\-+]*)"', s)
             if m and m.group(1) not in ("version", "name"):
                 out.append(("npm", m.group(1), m.group(3) if not m.group(2) else None))
@@ -56,6 +61,9 @@ def osv_lookup(deps):
     """Check pinned versions against osv.dev. Unpinned ones cannot be checked."""
     result = []
     for eco, pkg, ver in deps[:30]:
+        if eco == "address":
+            result.append({"package": pkg, "ecosystem": "npm", "note": "pulled straight from an address, not the package registry: cannot check; verify by hand"})
+            continue
         if not ver:
             result.append({"package": pkg, "ecosystem": eco, "note": "unpinned: version unknown, cannot check; verify by hand"})
             continue
@@ -135,6 +143,9 @@ def main():
         sys.exit(f"fork moved while cloning ({cloned[:7]} vs {head_sha[:7]}): run the scan again")
 
     findings, domains, dep_rows = [], {}, []
+    if len(files) >= C.GITHUB_FILE_CAP:
+        findings.append(("MEDIUM", "file list cut short", "(whole fork)", 0,
+                         f"GitHub lists at most {C.GITHUB_FILE_CAP} changed files and this fork changes at least that many, so some were not scanned"))
     changed = set()
     for x in files:
         name = x["filename"]

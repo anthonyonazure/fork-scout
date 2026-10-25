@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added: bad-fork regression suite (`tests/test_bad_forks.py`) and `TEST-REPORT.md`.
+- Fixed: shell startup file edits are now flagged (the rule could not match before a dot).
+- Fixed: a fork whose changed file list hit GitHub's 300 file cap is now flagged instead of silently half scanned.
+- Fixed: `exec`/`eval` of decoded text is now serious; more credential stores, Stripe style keys, hidden characters and CI text injection are flagged; dependencies fetched from a raw address are listed as unchecked; auto-loaded test setup files are no longer capped at minor.
+- Changed: medium scan findings now need `--accept-concerns` even when the reviewer says clear.
+
 - Fixed: `snapshot.py` now copies every tracked file. It used `git archive`, which silently drops files a project marks export-ignore (often its tests). It also refuses links that point outside the project.
 
 ## 0.1.0

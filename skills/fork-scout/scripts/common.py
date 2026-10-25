@@ -75,17 +75,19 @@ def upstream_of(fork, given=None):
 RULES = [
     ("HIGH", "pipe to shell", r"(curl|wget)[^\n|]*\|\s*(sudo\s+)?(ba|z)?sh\b", "downloads and runs code in one step"),
     ("HIGH", "reverse shell", r"/dev/tcp/|\bnc\s+(-e|-c)\b|bash\s+-i\s+>&", "opens a remote control channel"),
-    ("HIGH", "decode then run", r"(b64decode|base64\s+(-d|--decode)|atob)\(?[^\n]{0,80}(exec|eval|sh\b)", "hides code then runs it"),
-    ("HIGH", "reads credential stores", r"(\.ssh/(id_|config)|\.aws/credentials|\.netrc|Login Data|Library/Keychains|\bop\s+(read|item\s+get))", "touches passwords or keys"),
+    ("HIGH", "decode then run", r"(b64decode|base64\s+(-d|--decode)|atob)\(?[^\n]{0,80}(exec|eval|sh\b)|(exec|eval)\s*\([^\n]{0,60}(b64decode|atob|base64)", "hides code then runs it"),
+    ("HIGH", "reads credential stores", r"(\.ssh/(id_|config)|\.aws/credentials|\.netrc|Login Data|Library/Keychains|\bop\s+(read|item\s+get)|(~|\$HOME|\$\{HOME\}|expanduser|Path\.home)[^\n]{0,40}\.(npmrc|docker/config\.json|kube/config|config/gh/hosts\.yml|gnupg)|security\s+find-(generic|internet)-password)", "touches passwords or keys"),
     ("HIGH", "hides from user", r"(do not|don't|never)\s+(tell|inform|mention|show)[^\n]{0,30}(the )?user|without\s+(telling|informing)\s+the\s+user", "instruction aimed at an AI to keep a secret"),
     ("HIGH", "prompt override", r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|rules)|disregard\s+(your|the)\s+(instructions|rules)", "tries to override an AI's rules"),
     ("HIGH", "private key", r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "a private key is committed"),
     ("HIGH", "workflow runs outsider code", r"pull_request_target", "CI job that can run a stranger's code with your secrets"),
-    ("MEDIUM", "possible secret", r"(ghp_|gho_|github_pat_)[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|xox[bp]-[A-Za-z0-9-]{10,}", "looks like a live key or token"),
+    ("MEDIUM", "possible secret", r"(ghp_|gho_|github_pat_)[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|[sr]k_live_[A-Za-z0-9]{16,}|xox[bp]-[A-Za-z0-9-]{10,}", "looks like a live key or token"),
+    ("MEDIUM", "workflow pastes outsider text", r"\$\{\{\s*github\.(event\.(pull_request\.(title|body|head\.ref)|issue\.(title|body)|comment\.body|review\.body|head_commit\.message)|head_ref)\s*\}\}", "CI step that puts a stranger's text into a command"),
+    ("MEDIUM", "hidden characters", "[​⁠‪-‮⁦-⁩]", "invisible characters can make text read differently than it runs"),
     ("MEDIUM", "workflow uses moving version", r"uses:\s*\S+@(main|master|latest|v\d+)\s*$", "CI step pinned to a tag the author can change"),
     ("MEDIUM", "runs shell or programs", r"\b(os\.system|subprocess\.|child_process|execSync|spawnSync|Runtime\.getRuntime|popen\()", "launches other programs"),
     ("MEDIUM", "dynamic code", r"\b(eval|exec)\s*\(|new Function\(", "runs text as code"),
-    ("MEDIUM", "persistence", r"\b(launchctl|crontab|systemctl|LaunchAgents|schtasks|\.bashrc|\.zshrc|\.zprofile)\b", "keeps running or edits startup files"),
+    ("MEDIUM", "persistence", r"\b(launchctl|crontab|systemctl|LaunchAgents|schtasks)\b|\.(bashrc|zshrc|zprofile|bash_profile)\b", "keeps running or edits startup files"),
     ("MEDIUM", "touches AI config", r"(\.claude/(settings|hooks|skills)|CLAUDE\.md|AGENTS\.md|\"hooks\"\s*:|SessionStart|PreToolUse|UserPromptSubmit)", "changes how your AI assistant behaves"),
     ("MEDIUM", "sends data out", r"(requests\.(post|put)|fetch\([^)]*method\s*:\s*['\"]POST|axios\.post|curl\s[^\n]*(-d|--data|-F)\b|webhook|discord\.com/api/webhooks|pastebin)", "uploads something somewhere"),
     ("MEDIUM", "install-time script", r"\"(preinstall|postinstall|prepare|install)\"\s*:", "runs when the package is installed"),
@@ -99,8 +101,12 @@ URL_RE = re.compile(r"https?://([A-Za-z0-9.-]+)")
 TEST_RE = re.compile(r"(^|/)(tests?|__tests__|spec)/|(^|/)test_[^/]*$|\.test\.[jt]sx?$")
 
 
+GITHUB_FILE_CAP = 300  # GitHub's compare call lists at most this many files; past it the list is cut short
+AUTO_RUN_TEST_FILES = {"conftest.py", "setupTests.js", "jest.setup.js", "vitest.setup.ts"}  # test tools load these by themselves
+
+
 def is_test_path(name):
-    return bool(TEST_RE.search(name))
+    return bool(TEST_RE.search(name)) and Path(name).name not in AUTO_RUN_TEST_FILES
 
 
 def added_lines(patch):
@@ -144,6 +150,9 @@ def gate(fork, need_review=True, accept_concerns=False):
         sys.exit(f"fork changed since the scan ({str(rep.get('head_sha'))[:7]} then, {sha[:7]} now): rescan")
     if rep["verdict"] == "DO NOT FORK":
         sys.exit("scan verdict is DO NOT FORK: refusing")
+    medium = [x for x in rep.get("findings", []) if x[0] == "MEDIUM"]
+    if need_review and medium and not accept_concerns:
+        sys.exit(f"scan raised {len(medium)} item(s) to check: a reviewer's 'clear' does not erase them. Read them to the user, and pass --accept-concerns only if they accept")
     if need_review:
         vp = review_path(fork)
         if not vp.exists():
