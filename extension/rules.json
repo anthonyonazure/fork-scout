@@ -1,0 +1,173 @@
+{
+ "_about": "Single source of truth for fork-scout's scan rules. Read by scripts/common.py and, later, by the browser extension. Patterns must work as both Python re (case-insensitive) and JavaScript RegExp (flag i). Severity: HIGH, MEDIUM or LOW.",
+ "github_file_cap": 300,
+ "rules": [
+  {
+   "severity": "HIGH",
+   "label": "pipe to shell",
+   "pattern": "(curl|wget)[^\\n|]*\\|\\s*(sudo\\s+)?(ba|z)?sh\\b",
+   "why": "downloads and runs code in one step"
+  },
+  {
+   "severity": "HIGH",
+   "label": "reverse shell",
+   "pattern": "/dev/tcp/|\\bnc\\s+(-e|-c)\\b|bash\\s+-i\\s+>&",
+   "why": "opens a remote control channel"
+  },
+  {
+   "severity": "HIGH",
+   "label": "decode then run",
+   "pattern": "(b64decode|base64\\s+(-d|--decode)|atob)\\(?[^\\n]{0,80}(exec|eval|sh\\b)|(exec|eval)\\s*\\([^\\n]{0,60}(b64decode|atob|base64)",
+   "why": "hides code then runs it"
+  },
+  {
+   "severity": "HIGH",
+   "label": "reads credential stores",
+   "pattern": "(\\.ssh/(id_|config)|\\.aws/credentials|\\.netrc|Login Data|Library/Keychains|\\bop\\s+(read|item\\s+get)|(~|\\$HOME|\\$\\{HOME\\}|expanduser|Path\\.home)[^\\n]{0,40}\\.(npmrc|docker/config\\.json|kube/config|config/gh/hosts\\.yml|gnupg)|security\\s+find-(generic|internet)-password)",
+   "why": "touches passwords or keys"
+  },
+  {
+   "severity": "HIGH",
+   "label": "hides from user",
+   "pattern": "(do not|don't|never)\\s+(tell|inform|mention|show)[^\\n]{0,30}(the )?user|without\\s+(telling|informing)\\s+the\\s+user",
+   "why": "instruction aimed at an AI to keep a secret"
+  },
+  {
+   "severity": "HIGH",
+   "label": "prompt override",
+   "pattern": "ignore\\s+(all\\s+)?(previous|prior|above)\\s+(instructions|rules)|disregard\\s+(your|the)\\s+(instructions|rules)",
+   "why": "tries to override an AI's rules"
+  },
+  {
+   "severity": "HIGH",
+   "label": "private key",
+   "pattern": "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+   "why": "a private key is committed"
+  },
+  {
+   "severity": "HIGH",
+   "label": "workflow runs outsider code",
+   "pattern": "pull_request_target",
+   "why": "CI job that can run a stranger's code with your secrets"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "possible secret",
+   "pattern": "(ghp_|gho_|github_pat_)[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|[sr]k_live_[A-Za-z0-9]{16,}|xox[bp]-[A-Za-z0-9-]{10,}",
+   "why": "looks like a live key or token"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "workflow pastes outsider text",
+   "pattern": "\\$\\{\\{\\s*github\\.(event\\.(pull_request\\.(title|body|head\\.ref)|issue\\.(title|body)|comment\\.body|review\\.body|head_commit\\.message)|head_ref)\\s*\\}\\}",
+   "why": "CI step that puts a stranger's text into a command"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "hidden characters",
+   "pattern": "[\u200b\u2060\u202a-\u202e\u2066-\u2069]",
+   "why": "invisible characters can make text read differently than it runs"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "workflow uses moving version",
+   "pattern": "uses:\\s*\\S+@(main|master|latest|v\\d+)\\s*$",
+   "why": "CI step pinned to a tag the author can change"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "runs shell or programs",
+   "pattern": "\\b(os\\.system|subprocess\\.|child_process|execSync|spawnSync|Runtime\\.getRuntime|popen\\()",
+   "why": "launches other programs"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "dynamic code",
+   "pattern": "\\b(eval|exec)\\s*\\(|new Function\\(",
+   "why": "runs text as code"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "persistence",
+   "pattern": "\\b(launchctl|crontab|systemctl|LaunchAgents|schtasks)\\b|\\.(bashrc|zshrc|zprofile|bash_profile)\\b",
+   "why": "keeps running or edits startup files"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "touches AI config",
+   "pattern": "(\\.claude/(settings|hooks|skills)|CLAUDE\\.md|AGENTS\\.md|\\\"hooks\\\"\\s*:|SessionStart|PreToolUse|UserPromptSubmit)",
+   "why": "changes how your AI assistant behaves"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "sends data out",
+   "pattern": "(requests\\.(post|put)|fetch\\([^)]*method\\s*:\\s*['\\\"]POST|axios\\.post|curl\\s[^\\n]*(-d|--data|-F)\\b|webhook|discord\\.com/api/webhooks|pastebin)",
+   "why": "uploads something somewhere"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "install-time script",
+   "pattern": "\\\"(preinstall|postinstall|prepare|install)\\\"\\s*:",
+   "why": "runs when the package is installed"
+  },
+  {
+   "severity": "MEDIUM",
+   "label": "obfuscation",
+   "pattern": "(String\\.fromCharCode|\\\\x[0-9a-fA-F]{2}(\\\\x[0-9a-fA-F]{2}){12,}|[A-Za-z0-9+/=]{300,})",
+   "why": "looks deliberately hard to read"
+  },
+  {
+   "severity": "LOW",
+   "label": "environment secrets",
+   "pattern": "(os\\.environ|process\\.env)[^\\n]{0,40}(KEY|TOKEN|SECRET|PASSWORD)",
+   "why": "reads API keys from the environment"
+  }
+ ],
+ "binary_extensions": [
+  ".apk",
+  ".app",
+  ".bin",
+  ".dll",
+  ".dmg",
+  ".dylib",
+  ".exe",
+  ".jar",
+  ".msi",
+  ".node",
+  ".pkg",
+  ".pyc",
+  ".so",
+  ".whl"
+ ],
+ "safe_hosts": [
+  "anthropic.com",
+  "docs.python.org",
+  "example.com",
+  "github.com",
+  "githubusercontent.com",
+  "localhost",
+  "npmjs.com",
+  "openai.com",
+  "pypi.org",
+  "python.org",
+  "shields.io",
+  "w3.org",
+  "wikipedia.org"
+ ],
+ "known_installers": [
+  "deb.nodesource.com",
+  "astral.sh/uv",
+  "sh.rustup.rs",
+  "get.docker.com",
+  "bun.sh/install",
+  "deno.land/install",
+  "raw.githubusercontent.com/Homebrew/install"
+ ],
+ "test_path_pattern": "(^|/)(tests?|__tests__|spec)/|(^|/)test_[^/]*$|\\.test\\.[jt]sx?$",
+ "auto_run_test_files": [
+  "conftest.py",
+  "jest.setup.js",
+  "setupTests.js",
+  "vitest.setup.ts"
+ ]
+}
