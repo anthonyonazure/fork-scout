@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fork-scout results</title>
+<style>
+  :root { --bg: #fff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --accent: #0969da; --card: #f6f8fa;
+          --okbg: #dafbe1; --okfg: #116329; --warnbg: #fff8c5; --warnfg: #7d4e00; --badbg: #ffebe9; --badfg: #a40e26; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --accent: #4493f8; --card: #151b23;
+          --okbg: #12261e; --okfg: #7ee2a8; --warnbg: #2d2a12; --warnfg: #e3b341; --badbg: #2c1618; --badfg: #ff8182; } }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; margin: 0; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 12px; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: 13px; }
+  form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  input[type=text] { flex: 1 1 260px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+  button { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .modes { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; }
+  .chip { padding: 2px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { color: var(--okfg); background: var(--okbg); border-color: transparent; }
+  .card { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .head strong { font-size: 16px; }
+  .badge { padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .ok { background: var(--okbg); color: var(--okfg); } .check { background: var(--warnbg); color: var(--warnfg); } .bad { background: var(--badbg); color: var(--badfg); }
+  ul { margin: 4px 0 4px 20px; padding: 0; }
+  details { margin-top: 6px; } summary { cursor: pointer; }
+  .ai { border-left: 3px solid var(--accent); padding: 4px 12px; margin: 10px 0; }
+  .ai h3 { margin: 0 0 4px; font-size: 14px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .err { color: var(--badfg); font-size: 13px; }
+  .good { color: var(--okfg); font-size: 14px; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .dialog { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; max-width: 520px; width: 100%; }
+  .dialog h2 { margin: 0 0 8px; font-size: 18px; }
+  .dialog .buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main>
+  <h1>fork-scout</h1>
+  <form id="form">
+    <input type="text" id="repo" placeholder="owner/name or a github.com address" autocomplete="off" aria-label="Repository">
+    <button type="submit">Look at forks</button>
+    <button type="button" class="secondary" id="settings">Settings</button>
+  </form>
+  <div class="modes" id="modes"></div>
+  <div class="muted" id="status">Type a repository above, or open this page from the toolbar button while viewing one on GitHub.</div>
+  <div id="list"></div>
+  <footer class="muted">A clean result means "no red flags found", never "safe". Nothing from a fork is ever run. Copying a fork only creates a copy in your GitHub account; it does not install anything.</footer>
+</main>
+<script src="scanlib.js"></script>
+<script src="policy.js"></script>
+<script src="core.js"></script>
+<script src="results.js"></script>
+</body>
+</html>

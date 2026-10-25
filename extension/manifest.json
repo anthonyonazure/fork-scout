@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "fork-scout",
-  "version": "0.1.0",
-  "description": "Find the forks of a GitHub repo worth copying, with a safety scan. Works with no setup; GitHub token and AI review are optional.",
-  "permissions": ["storage"],
-  "host_permissions": ["https://api.github.com/*"],
+  "version": "0.2.0",
+  "description": "Find the forks of a GitHub repo worth copying, with a safety scan. Works with no setup; GitHub token, AI review and one-click forking are optional.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://api.github.com/*", "https://api.anthropic.com/*"],
   "background": { "service_worker": "background.js" },
+  "action": { "default_title": "fork-scout: open results for this repo" },
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
-      "js": ["scanlib.js", "content.js"],
+      "js": ["scanlib.js", "core.js", "content.js"],
       "run_at": "document_idle"
     }
   ],

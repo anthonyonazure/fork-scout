@@ -89,7 +89,32 @@
     return r.daysIdle <= 120 ? 1 : 2;
   }
 
-  const api = { SEVERITY, prepare, isTestPath, addedLines, scanLines, scanCompare, tier };
+  /** A short stamp of exactly what GitHub says this fork changed. If it differs later, the fork moved. */
+  function fingerprint(cmp) {
+    const parts = [cmp.ahead_by, ...(cmp.files || []).map((f) => `${f.filename}:${f.sha || ""}:${f.changes}`).sort()];
+    let h = 2166136261;
+    for (const ch of parts.join("|")) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    return `${cmp.ahead_by}-${(cmp.files || []).length}-${h.toString(16)}`;
+  }
+
+  /**
+   * The copy gate, same rules as the Python skill. The scan is never optional: a serious finding blocks whatever the AI says.
+   * `ai` is null when no AI review was run, which is allowed but labelled as such in the screen.
+   */
+  function gate({ scan, ai, shownFingerprint, nowFingerprint, accept }) {
+    if (shownFingerprint !== nowFingerprint) return { ok: false, reason: "This fork changed since you looked at it. Reload the results and look again." };
+    if (ai && ai.fingerprint !== nowFingerprint) return { ok: false, reason: "The AI review is for an older version of this fork. Run it again." };
+    if (scan.verdict === "DO NOT FORK") return { ok: false, reason: "The scan found serious flags, so copying is blocked whatever the AI says." };
+    if (ai && ai.verdict === "unsafe") return { ok: false, reason: "The AI review says this fork is unsafe, so copying is blocked." };
+    const medium = scan.findings.filter((f) => f[0] === "MEDIUM").length;
+    const concerns = !!ai && ai.verdict === "concerns";
+    if ((medium || concerns) && !accept) {
+      return { ok: false, needsAccept: true, reason: `${medium ? `The scan raised ${medium} item(s) to check. ` : ""}${concerns ? "The AI raised concerns. " : ""}Read them, and tick the box only if you accept them.` };
+    }
+    return { ok: true };
+  }
+
+  const api = { SEVERITY, prepare, isTestPath, addedLines, scanLines, scanCompare, tier, fingerprint, gate };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ForkScoutScan = api;
 })(typeof self !== "undefined" ? self : this);

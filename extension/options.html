@@ -7,35 +7,42 @@
 <style>
   :root { --bg: #fff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --accent: #0969da; }
   @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --accent: #4493f8; } }
-  body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; max-width: 680px; margin: 32px auto; padding: 0 16px; }
   h1 { font-size: 22px; } h2 { font-size: 16px; margin-top: 28px; }
   p, label { color: var(--muted); }
-  input { width: 100%; box-sizing: border-box; padding: 8px; margin: 6px 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+  input, select { width: 100%; box-sizing: border-box; padding: 8px; margin: 6px 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
   button { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
   .box { border: 1px solid var(--line); border-radius: 8px; padding: 4px 16px 16px; }
-  .off { opacity: .6; }
   #saved { color: var(--accent); margin-left: 10px; }
 </style>
 </head>
 <body>
 <h1>fork-scout settings</h1>
-<p>Everything works with nothing set up. These are optional extras.</p>
+<p>Everything works with nothing set up. These are optional extras, and each one is stored only in this browser.</p>
 
-<h2>GitHub token (optional)</h2>
+<h2>GitHub token for reading (optional)</h2>
 <div class="box">
-  <p>Without a token GitHub allows about 60 requests an hour, enough for small repos. A token raises that. Use a fine-grained token with <strong>read-only access to public repositories</strong>. Never use a token that can write.</p>
-  <label for="token">Token</label>
+  <p>Without a token GitHub allows about 60 requests an hour, enough for small repos. A token raises that. Use a fine-grained token with <strong>read-only access to public repositories</strong>. Never use a token that can write here. Sent only to api.github.com.</p>
   <input id="token" type="password" autocomplete="off" placeholder="github_pat_...">
-  <p>Stored only in this browser. Sent only to api.github.com.</p>
 </div>
 
-<h2>AI review (coming next)</h2>
-<div class="box off">
-  <p>Plain-English cards and an AI second opinion. When this is off, results are labelled "pattern scan only". The scan always runs, and a serious finding blocks copying whatever the AI says.</p>
-  <input type="password" disabled placeholder="not available in this version">
+<h2>AI review (optional)</h2>
+<div class="box">
+  <p>Adds plain-English cards and a second opinion on each fork. <strong>This sends the fork's changed code to Anthropic</strong> using your own API key, and your key is billed for it. The scan always runs regardless, and a serious scan finding blocks copying whatever the AI says. When this is off, results are labelled "pattern scan only".</p>
+  <label for="aikey">Anthropic API key</label>
+  <input id="aikey" type="password" autocomplete="off" placeholder="sk-ant-...">
+  <label for="model">Model</label>
+  <select id="model"></select>
+</div>
+
+<h2>Forking (optional)</h2>
+<div class="box">
+  <p>Lets the results page create a <strong>public fork in your GitHub account</strong>, after a confirmation screen each time. This is the only thing the extension can write. It needs its own token that can create forks (a classic token with <code>public_repo</code> access works). Keep it separate from the reading token above.</p>
+  <input id="writetoken" type="password" autocomplete="off" placeholder="ghp_... or github_pat_...">
 </div>
 
 <p style="margin-top:24px"><button id="save">Save</button><span id="saved"></span></p>
+<script src="policy.js"></script>
 <script src="options.js"></script>
 </body>
 </html>
